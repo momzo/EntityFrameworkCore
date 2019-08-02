@@ -4449,6 +4449,97 @@ namespace Microsoft.EntityFrameworkCore.ChangeTracking.Internal
                     });
         }
 
+        //
+        //          ApplicationVersion             Application
+        //            |            |                   |
+        //         Attitude      Rejection          Attitude
+        //            |            |                   |
+        //         FirstTest     FirstTest          FirstTest
+        //            |            |                   |
+        // SpecialistStaff     SpecialistStaff    SpecialistStaff
+        //
+
+        private class Application
+        {
+            public Guid Id { get; protected set; }
+            public Attitude Attitude { get; set; }
+            public Rejection Rejection { get; set; }
+        }
+
+        private class ApplicationVersion
+        {
+            public Guid Id { get; protected set; }
+            public Attitude Attitude { get; set; }
+        }
+
+        private class Rejection
+        {
+            public FirstTest FirstTest { get; set; }
+        }
+
+        private class Attitude
+        {
+            public FirstTest FirstTest { get; set; }
+        }
+
+        private class FirstTest
+        {
+            public SpecialistStaff Tester { get; set; }
+        }
+
+        private class SpecialistStaff
+        {
+        }
+
+        private class RejectionContext : DbContext
+        {
+            private readonly string _databaseName;
+
+            public RejectionContext(string databaseName)
+            {
+                _databaseName = databaseName;
+            }
+
+            protected internal override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+                => optionsBuilder.UseInMemoryDatabase(_databaseName);
+
+            protected internal override void OnModelCreating(ModelBuilder modelBuilder)
+            {
+                modelBuilder.Entity<Application>(entity =>
+                {
+                    entity.OwnsOne(x => x.Attitude,
+                        amb =>
+                        {
+                            amb.OwnsOne(x => x.FirstTest, mb =>
+                            {
+                                mb.OwnsOne(a => a.Tester);
+                            });
+                        });
+
+                    entity.OwnsOne(x => x.Rejection,
+                        amb =>
+                        {
+                            amb.OwnsOne(x => x.FirstTest, mb =>
+                            {
+                                mb.OwnsOne(a => a.Tester);
+                            });
+                        });
+                });
+
+                modelBuilder.Entity<ApplicationVersion>(entity =>
+                {
+                    entity.OwnsOne(x => x.Attitude,
+                        amb =>
+                        {
+                            amb.OwnsOne(x => x.FirstTest, mb =>
+                            {
+                                mb.OwnsOne(a => a.Tester);
+                            });
+                        });
+                });
+            }
+        }
+
         private class Parent : IComparable<Parent>
         {
             public int Id { get; set; }
